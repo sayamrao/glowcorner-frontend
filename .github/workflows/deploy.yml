@@ -1,0 +1,59 @@
+name: Deploy Nuxt Frontend
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: latest
+        run_install: false
+
+    - name: Build Nuxt App Locally in Actions
+      env:
+        NUXT_PUBLIC_API_BASE: http://178.104.191.21:8000/api/v1
+      run: |
+        pnpm install
+        pnpm run build
+        pnpm run build
+        # This generates the .output folder containing the built production server
+
+    - name: Set up SSH Key
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+    - name: Deploy Built Artifacts via SSH
+      env:
+        VPS_HOST: ${{ secrets.VPS_HOST }}
+        VPS_USER: ${{ secrets.VPS_USER }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "StrictHostKeyChecking no" >> ~/.ssh/config
+
+        # Upload only the build folder and package files to save bandwidth/time
+        rsync -avz ./ .output package.json pnpm-lock.yaml $VPS_USER@$VPS_HOST:/var/www/my-app/frontend/
+
+        # Restart Nuxt via PM2 on the VPS
+        ssh $VPS_USER@$VPS_HOST << 'EOF'
+          cd /var/www/my-app/frontend
+          pnpm install --prod
+          
+          # Restart or start PM2 process
+          pm2 restart nuxt-frontend || pm2 start .output/server/index.mjs --name "nuxt-frontend"
+          pm2 save
+        EOF
