@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  familycorner-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: familycorner-frontend:latest
+    container_name: familycorner_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NUXT_HOST=0.0.0.0
+      - NUXT_PORT=3000
+      - NODE_ENV=production
+      - NUXT_PUBLIC_API_BASE=http://api:8000/api/v1 # Expected FastAPI backend hostname in a real deployment
+      - NUXT_PUBLIC_WHATSAPP_NUMBER=923001234567
+    networks:
+      - familycorner-network
+
+networks:
+  familycorner-network:
+    driver: bridge
