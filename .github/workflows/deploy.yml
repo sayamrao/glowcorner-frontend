@@ -25,7 +25,7 @@ jobs:
 
     - name: Build Nuxt App Locally in Actions
       env:
-        NUXT_PUBLIC_API_BASE: http://178.104.191.21:8000/api/v1
+        NUXT_PUBLIC_API_BASE: http://api.familycorner.pk
       run: |
         pnpm install --config.confirmModulesPurge=false
         pnpm run build
