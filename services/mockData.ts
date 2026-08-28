@@ -154,7 +154,7 @@ export const mockProducts: Product[] = generateProducts()
 export const mockBanners: Banner[] = [
   {
     id: 'ban-1', title: 'Family Corner - Up to 50% Off', subtitle: 'Everything for your family, all in one corner!',
-    image: '/images/banner1.png', link: '/products', isActive: true,
+    image: '/images/Banner1.png', link: '/products', isActive: true,
   },
   // {
   //   id: 'ban-2', title: 'New Arrivals', subtitle: 'Discover the fastest RC cars',
