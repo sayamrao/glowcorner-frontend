@@ -46,7 +46,7 @@ jobs:
         echo "StrictHostKeyChecking no" >> ~/.ssh/config
 
         # Upload only the build folder and package files to save bandwidth/time
-        rsync -avz ./ .output package.json pnpm-lock.yaml $VPS_USER@$VPS_HOST:/var/www/my-app/frontend/
+        rsync -avz ./ .output public package.json pnpm-lock.yaml $VPS_USER@$VPS_HOST:/var/www/my-app/frontend/
 
         # Restart Nuxt via PM2 on the VPS
         ssh $VPS_USER@$VPS_HOST << 'EOF'
