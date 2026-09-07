@@ -103,7 +103,7 @@ class ApiClient {
 
     const url = `${this.baseUrl}${endpoint}`
     const authHeaders = requireAuth ? this.getAuthHeaders() : {}
-
+    const isFormData = body instanceof FormData
     try {
       const response = await $fetch<T>(url, {
         method,
@@ -111,7 +111,7 @@ class ApiClient {
         params: Object.keys(cleanParams).length ? cleanParams : undefined,
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
           ...authHeaders,
           ...headers,
         },

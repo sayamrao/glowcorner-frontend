@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/auth'
-import { createProduct, updateProduct } from '~/services/commerce'
+import { createProduct, updateProduct, uploadProductImage } from '~/services/commerce'
 import { useToast } from '~/composables/useToast'
 import ProductBasicInfo from "./ProductBasicInfo.vue"
 import ProductPricing from "./ProductPricing.vue"
@@ -16,6 +16,13 @@ interface VariantForm {
   is_active: boolean
   attributes: Record<string, string>
 }
+
+const imageFiles = ref<File[]>([])
+const imagePreviews = ref<string[]>([])
+const isUploadingImages = ref(false)
+
+const MAX_IMAGES = 8
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10 MB
 
 interface ProductFormModel {
   name: string
@@ -171,6 +178,53 @@ watch(
 )
 
 
+function selectImages(event: Event) {
+  const input = event.target as HTMLInputElement
+
+  if (!input.files) return
+
+  const files = Array.from(input.files)
+
+  for (const file of files) {
+    if (!file.type.startsWith("image/")) {
+      toast.error(
+        "Invalid Image",
+        `${file.name} is not a valid image.`
+      )
+      continue
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      toast.error(
+        "Image Too Large",
+        `${file.name} must be smaller than 10 MB.`
+      )
+      continue
+    }
+
+    if (imageFiles.value.length >= MAX_IMAGES) {
+      toast.error(
+        "Maximum Images",
+        `You can upload up to ${MAX_IMAGES} images.`
+      )
+      break
+    }
+
+    imageFiles.value.push(file)
+    imagePreviews.value.push(URL.createObjectURL(file))
+  }
+
+  // Allows selecting the same file again
+  input.value = ""
+}
+
+function removeSelectedImage(index: number) {
+  URL.revokeObjectURL(imagePreviews.value[index])
+
+  imageFiles.value.splice(index, 1)
+  imagePreviews.value.splice(index, 1)
+}
+
 function addVariant() {
   form.variants.push({
     sku: "",
@@ -290,15 +344,16 @@ async function submit() {
   const payload = buildPayload()
 
   try {
+    let savedProduct: any
     if (props.mode === "create") {
-      await createProduct(payload)
+      savedProduct = await createProduct(payload)
 
       toast.success(
         "Product Created",
         "Your product has been created."
       )
     } else {
-      await updateProduct(props.product.id, payload)
+      savedProduct = await updateProduct(props.product.id, payload)
 
       toast.success(
         "Product Updated",
@@ -306,8 +361,39 @@ async function submit() {
       )
     }
 
+    const productId =
+      savedProduct?.data?.id ??
+      savedProduct?.data?.data?.id ??
+      savedProduct?.id ??
+      props.product?.id
+
+    if (!productId) {
+      throw new Error(
+        "Product was saved, but no product ID was returned."
+      )
+    }
+     // -----------------------------------------
+    // Upload images
+    // -----------------------------------------
+
+    if (imageFiles.value.length > 0) {
+      isUploadingImages.value = true
+
+      for (const file of imageFiles.value) {
+        console.log("uploadign image")
+        await uploadProductImage(
+          productId,
+          file
+        )
+      }
+
+      isUploadingImages.value = false
+    }
+
+
     emit("saved")
   } catch (e: any) {
+    isUploadingImages.value = false
     apiError.value =
       e?.message ?? "Unable to save product."
   } finally {
@@ -344,6 +430,78 @@ async function submit() {
       @remove="removeVariant"
     />
 
+    <div class="space-y-4">
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900">
+          Product Images
+        </h3>
+
+        <p class="text-sm text-gray-500 mt-1">
+          Upload up to {{ MAX_IMAGES }} images. JPG, PNG or WebP.
+          Maximum 10 MB each.
+        </p>
+      </div>
+
+      <div
+        class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-gray-400 transition"
+      >
+        <input
+          id="product-images"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          class="hidden"
+          @change="selectImages"
+        />
+
+        <label
+          for="product-images"
+          class="cursor-pointer flex flex-col items-center"
+        >
+          <div class="text-gray-500">
+            Click to select product images
+          </div>
+
+          <div class="text-sm text-gray-400 mt-1">
+            JPG, PNG or WebP
+          </div>
+        </label>
+      </div>
+
+      <!-- Selected images -->
+      <div
+        v-if="imagePreviews.length"
+        class="grid grid-cols-2 sm:grid-cols-4 gap-4"
+      >
+        <div
+          v-for="(preview, index) in imagePreviews"
+          :key="preview"
+          class="relative group aspect-square rounded-xl overflow-hidden border border-gray-200"
+        >
+          <img
+            :src="preview"
+            class="w-full h-full object-cover"
+            alt="Product preview"
+          />
+
+          <button
+            type="button"
+            class="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+            @click="removeSelectedImage(index)"
+          >
+            ×
+          </button>
+
+          <div
+            v-if="index === 0"
+            class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-2 py-1"
+          >
+            Primary image
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="flex justify-end gap-4">
 
       <UiButton
@@ -355,12 +513,14 @@ async function submit() {
 
       <UiButton
         type="submit"
-        :loading="isSubmitting"
+        :loading="isSubmitting || isUploadingImages"
       >
         {{
-          mode === "create"
-            ? "Create Product"
-            : "Update Product"
+          isUploadingImages
+            ? "Uploading Images..."
+            : mode === "create"
+              ? "Create Product"
+              : "Update Product"
         }}
       </UiButton>
 

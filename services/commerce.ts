@@ -181,12 +181,7 @@ export function mapBackendProduct(product: BackendProduct): Product {
       url: image.url,
       alt: image.alt_text || product.name,
       isMain: image.is_primary,
-  })) : [{
-      id: `${product.id}-image`,
-      url: product.primary_image || mock?.images[0]?.url || fallbackImage(product),
-      alt: product.name,
-      isMain: true,
-  }]
+  })) : []
   const variants = (product.variants || []).map(variant => ({
       id: variant.id,
       name: variant.name || variant.sku,
@@ -536,4 +531,26 @@ export function productToCartItem(product: Product, quantity = 1, variantId ? : 
       maxQuantity: variant?.stock || product.stock || 99,
       sellerName: product.sellerName,
   }
+}
+
+export async function uploadProductImage(
+  productId: string,
+  file: File
+) {
+  console.log("UPLOAD FILE", {
+    name: file.name,
+    type: file.type,
+    size: file.size,
+    isFile: file instanceof File,
+  })
+
+  const formData = new FormData()
+  formData.append("file", file, file.name)
+
+  console.log("FORM DATA", [...formData.entries()])
+
+  return apiClient.post(
+    `/products/${productId}/media`,
+    formData
+  )
 }
