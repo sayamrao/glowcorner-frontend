@@ -25,7 +25,9 @@ class ApiClient {
   initialize(baseUrl: string) {
     this.baseUrl = baseUrl
   }
-
+  getBaseUrl() {
+    return this.baseUrl
+  }
   private getAuthHeaders(): Record<string, string> {
     const token = secureStorage.get(STORAGE_KEYS.accessToken)
     return token ? { Authorization: `Bearer ${token}` } : {}

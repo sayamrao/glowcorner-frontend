@@ -176,12 +176,16 @@ function fallbackImage(product: Pick < BackendProduct, 'id' | 'slug' | 'name' > 
 }
 export function mapBackendProduct(product: BackendProduct): Product {
   const mock = mockProducts.find(item => item.id === product.id || item.slug === product.slug)
-  const images = product.media?.length ? [...product.media].sort((a, b) => a.sort_order - b.sort_order).map(image => ({
-      id: image.id,
-      url: image.url,
-      alt: image.alt_text || product.name,
-      isMain: image.is_primary,
-  })) : []
+  const images = product.media?.length
+    ? [...product.media]
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map(image => ({
+          id: image.id,
+          url: mediaUrl(image.url),
+          alt: image.alt_text || product.name,
+          isMain: image.is_primary,
+        }))
+    : []
   const variants = (product.variants || []).map(variant => ({
       id: variant.id,
       name: variant.name || variant.sku,
@@ -551,6 +555,18 @@ export async function uploadProductImage(
 
   return apiClient.post(
     `/products/${productId}/media`,
-    formData
+    formData, true
   )
+}
+
+function mediaUrl(url: string | null | undefined): string {
+  if (!url) return ''
+
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url
+  }
+
+  const baseUrl = apiClient.getBaseUrl()
+
+  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
 }
