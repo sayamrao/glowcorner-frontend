@@ -185,7 +185,15 @@ export function mapBackendProduct(product: BackendProduct): Product {
           alt: image.alt_text || product.name,
           isMain: image.is_primary,
         }))
+    : product.primary_image
+    ? [{
+        id: `${product.id}-primary`,
+        url: mediaUrl(product.primary_image),
+        alt: product.name,
+        isMain: true,
+      }]
     : []
+
   const variants = (product.variants || []).map(variant => ({
       id: variant.id,
       name: variant.name || variant.sku,
