@@ -479,6 +479,7 @@ async function submit() {
           </div>
         </label>
       </div>
+    </div>
 
       <!-- Existing images -->
       <div v-if="existingMedia.length" class="space-y-2">
