@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { mockProducts, mockCategories } from '~/services/mockData'
+import { mockProducts } from '~/services/mockData'
 import { SORT_OPTIONS } from '~/constants'
-import { listProducts } from '~/services/commerce'
-import type { Product } from '~/types'
+import { listCategories, listProducts } from '~/services/commerce'
+import type { Category, Product } from '~/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -12,31 +12,99 @@ const showMobileFilters = ref(false)
 const isLoading = ref(false)
 const apiError = ref('')
 
-// Filters State
-const selectedCategory = ref(route.query.category as string || '')
-const searchQuery = ref(route.query.q as string || '')
-const sortBy = ref(route.query.sort as string || 'popular')
-const minPrice = ref(route.query.minPrice as string || '')
-const maxPrice = ref(route.query.maxPrice as string || '')
+const categories = ref<Category[]>([])
 const products = ref<Product[]>([])
 const totalProducts = ref(0)
+
+const selectedCategory = computed({
+  get: () => String(route.query.category || ''),
+  set: (value: string) => {
+    updateRouteQuery({ category: value || undefined })
+  },
+})
+
+const searchQuery = computed({
+  get: () => String(route.query.q || ''),
+  set: (value: string) => {
+    updateRouteQuery({ q: value || undefined })
+  },
+})
+
+const sortBy = computed({
+  get: () => String(route.query.sort || 'popular'),
+  set: (value: string) => {
+    updateRouteQuery({ sort: value !== 'popular' ? value : undefined })
+  },
+})
+
+const minPrice = computed({
+  get: () => String(route.query.minPrice || ''),
+  set: (value: string) => {
+    updateRouteQuery({ minPrice: value || undefined })
+  },
+})
+
+const maxPrice = computed({
+  get: () => String(route.query.maxPrice || ''),
+  set: (value: string) => {
+    updateRouteQuery({ maxPrice: value || undefined })
+  },
+})
+
+async function updateRouteQuery(changes: Record<string, string | undefined>) {
+  await router.push({
+    query: {
+      ...route.query,
+      ...changes,
+    },
+  })
+}
+
+function findCategoryBySlugOrId(
+  items: Category[],
+  value: string
+): Category | undefined {
+  for (const category of items) {
+    if (category.slug === value || category.id === value) {
+      return category
+    }
+
+    const child = findCategoryBySlugOrId(category.children || [], value)
+    if (child) {
+      return child
+    }
+  }
+
+  return undefined
+}
+
+function getSelectedCategoryId(): string | undefined {
+  if (!selectedCategory.value) {
+    return undefined
+  }
+
+  return findCategoryBySlugOrId(categories.value, selectedCategory.value)?.id
+}
 
 async function fetchProducts() {
   isLoading.value = true
   apiError.value = ''
 
   try {
-    const category = mockCategories.find(cat => cat.slug === selectedCategory.value || cat.id === selectedCategory.value)
     const response = await listProducts({
       page: 1,
       limit: 48,
       search: searchQuery.value || undefined,
-      category: category?.id && category.id.includes('-') ? undefined : category?.id,
-      sortBy: sortBy.value as any,
+      category: getSelectedCategoryId(),
+      minPrice: minPrice.value ? Number(minPrice.value) : undefined,
+      maxPrice: maxPrice.value ? Number(maxPrice.value) : undefined,
+      sortBy: sortBy.value as ProductListParams['sortBy'],
     })
+
     products.value = response.data
     totalProducts.value = response.total
   } catch (error: any) {
+    console.error('Failed to load products:', error)
     apiError.value = error?.message || 'Could not load products from API'
     products.value = [...mockProducts]
     totalProducts.value = products.value.length
@@ -45,86 +113,22 @@ async function fetchProducts() {
   }
 }
 
-// Computed Filtered Products
-const filteredProducts = computed(() => {
-  let result = [...products.value]
+const filteredProducts = computed(() => products.value)
 
-  if (selectedCategory.value) {
-    const category = mockCategories.find(cat => cat.slug === selectedCategory.value || cat.id === selectedCategory.value)
-    const hasCategoryMatches = result.some(p => (
-      p.categoryId === selectedCategory.value ||
-      p.categoryId === category?.id ||
-      p.categoryName.toLowerCase() === selectedCategory.value.toLowerCase() ||
-      p.categoryName.toLowerCase() === category?.name.toLowerCase()
-    ))
-    if (hasCategoryMatches) {
-      result = result.filter(p => (
-        p.categoryId === selectedCategory.value ||
-        p.categoryId === category?.id ||
-        p.categoryName.toLowerCase() === selectedCategory.value.toLowerCase() ||
-        p.categoryName.toLowerCase() === category?.name.toLowerCase()
-      ))
-    }
+watch(
+  () => [
+    route.query.category,
+    route.query.q,
+    route.query.sort,
+    route.query.minPrice,
+    route.query.maxPrice,
+  ],
+  () => {
+    fetchProducts()
   }
+)
 
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase()
-    result = result.filter(p => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || p.sellerName.toLowerCase().includes(q))
-  }
-
-  if (minPrice.value) {
-    result = result.filter(p => p.price >= Number(minPrice.value))
-  }
-
-  if (maxPrice.value) {
-    result = result.filter(p => p.price <= Number(maxPrice.value))
-  }
-
-  // Sort
-  switch (sortBy.value) {
-    case 'price_asc':
-      result.sort((a, b) => a.price - b.price)
-      break
-    case 'price_desc':
-      result.sort((a, b) => b.price - a.price)
-      break
-    case 'rating':
-      result.sort((a, b) => b.rating - a.rating)
-      break
-    case 'newest':
-      result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      break
-    case 'popular':
-    default:
-      result.sort((a, b) => b.reviewCount - a.reviewCount)
-  }
-
-  return result
-})
-
-// Watchers to update URL
-watch([selectedCategory, searchQuery, sortBy], () => {
-  router.push({
-    query: {
-      ...route.query,
-      category: selectedCategory.value || undefined,
-      q: searchQuery.value || undefined,
-      sort: sortBy.value !== 'popular' ? sortBy.value : undefined,
-    }
-  })
-  fetchProducts()
-})
-
-watch([minPrice, maxPrice], () => {
-  router.push({
-    query: {
-      ...route.query,
-      minPrice: minPrice.value || undefined,
-      maxPrice: maxPrice.value || undefined,
-    },
-  })
-})
-
+categories.value = await listCategories()
 await fetchProducts()
 
 useHead({
@@ -159,14 +163,14 @@ useHead({
                 All Categories
               </button>
             </li>
-            <li v-for="cat in mockCategories" :key="cat.id">
+            <li v-for="cat in categories" :key="cat.id">
               <button 
                 class="text-sm transition-colors hover:text-brand-600 w-full text-left flex justify-between items-center" 
                 :class="selectedCategory === cat.slug || selectedCategory === cat.id ? 'text-brand-600 font-bold' : 'text-surface-600 dark:text-surface-400'"
                 @click="selectedCategory = cat.slug"
               >
                 <span>{{ cat.name }}</span>
-                <span class="text-xs bg-surface-100 dark:bg-surface-800 px-1.5 py-0.5 rounded">{{ cat.productCount }}</span>
+                
               </button>
             </li>
           </ul>
@@ -239,7 +243,7 @@ useHead({
               <input type="radio" v-model="selectedCategory" value="" class="text-brand-600 focus:ring-brand-500" />
               <span>All Categories</span>
             </label>
-            <label v-for="cat in mockCategories" :key="cat.id" class="flex items-center gap-3">
+            <label v-for="cat in categories" :key="cat.id" class="flex items-center gap-3">
               <input type="radio" v-model="selectedCategory" :value="cat.slug" class="text-brand-600 focus:ring-brand-500" />
               <span>{{ cat.name }}</span>
             </label>
