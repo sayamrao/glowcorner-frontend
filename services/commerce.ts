@@ -251,7 +251,7 @@ function mapSort(sortBy?: ProductListParams['sortBy']) {
                       }
                       default:
                           return {
-                              sort_by: 'created_at', sort_order: 'desc'
+                              sort_by: 'review_count', sort_order: 'desc'
                           }
   }
 }
