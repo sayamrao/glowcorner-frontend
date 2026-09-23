@@ -21,6 +21,18 @@ const imageFiles = ref<File[]>([])
 const imagePreviews = ref<string[]>([])
 const isUploadingImages = ref(false)
 
+const existingMedia = computed(() => {
+  if (props.mode !== "edit" || !props.product?.media) return []
+
+  return [...props.product.media].sort(
+    (a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
+  )
+})
+
+const totalImageCount = computed(
+  () => existingMedia.value.length + imageFiles.value.length
+)
+
 const MAX_IMAGES = 8
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10 MB
 
@@ -202,10 +214,10 @@ function selectImages(event: Event) {
       continue
     }
 
-    if (imageFiles.value.length >= MAX_IMAGES) {
+    if (totalImageCount.value >= MAX_IMAGES) {
       toast.error(
         "Maximum Images",
-        `You can upload up to ${MAX_IMAGES} images.`
+        `You can upload up to ${MAX_IMAGES} images in total.`
       )
       break
     }
@@ -468,11 +480,44 @@ async function submit() {
         </label>
       </div>
 
-      <!-- Selected images -->
+      <!-- Existing images -->
+      <div v-if="existingMedia.length" class="space-y-2">
+        <h4 class="text-sm font-medium text-gray-700">
+          Current images ({{ existingMedia.length }}/{{ MAX_IMAGES }})
+        </h4>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div
+            v-for="image in existingMedia"
+            :key="image.id"
+            class="relative aspect-square rounded-xl overflow-hidden border border-gray-200"
+          >
+            <img
+              :src="mediaUrl(image.url)"
+              :alt="image.alt_text || 'Product image'"
+              class="w-full h-full object-cover"
+            />
+
+            <div
+              v-if="image.is_primary"
+              class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-2 py-1"
+            >
+              Primary image
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Newly selected images -->
       <div
         v-if="imagePreviews.length"
-        class="grid grid-cols-2 sm:grid-cols-4 gap-4"
+        class="space-y-2"
       >
+        <h4 class="text-sm font-medium text-gray-700">
+          New images ({{ totalImageCount }}/{{ MAX_IMAGES }})
+        </h4>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div
           v-for="(preview, index) in imagePreviews"
           :key="preview"
@@ -493,7 +538,7 @@ async function submit() {
           </button>
 
           <div
-            v-if="index === 0"
+            v-if="existingMedia.length === 0 && index === 0"
             class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-2 py-1"
           >
             Primary image
