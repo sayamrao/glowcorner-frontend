@@ -231,19 +231,19 @@ export function mapBackendProduct(product: BackendProduct): Product {
   }
 }
 
-function mapSort(sortBy ? : ProductListParams['sortBy']) {
+function mapSort(sortBy?: ProductListParams['sortBy']) {
   switch (sortBy) {
       case 'price_asc':
           return {
-              sort_by: 'base_price', sort_order: 'asc'
+              sort_by: 'price', sort_order: 'asc'
           }
           case 'price_desc':
               return {
-                  sort_by: 'base_price', sort_order: 'desc'
+                  sort_by: 'price', sort_order: 'desc'
               }
               case 'rating':
                   return {
-                      sort_by: 'average_rating', sort_order: 'desc'
+                      sort_by: 'rating', sort_order: 'desc'
                   }
                   case 'newest':
                       return {
@@ -251,7 +251,7 @@ function mapSort(sortBy ? : ProductListParams['sortBy']) {
                       }
                       default:
                           return {
-                              sort_by: 'review_count', sort_order: 'desc'
+                              sort_by: 'created_at', sort_order: 'desc'
                           }
   }
 }
