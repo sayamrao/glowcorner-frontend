@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { mockBanners, mockProducts } from '~/services/mockData'
-import { listCategories } from '~/services/commerce'
+import { listCategories, listProducts } from '~/services/commerce'
 import type { Category, Product } from '~/types'
-import { listProducts } from '~/services/commerce'
 import { formatPrice } from '~/utils'
 
 const banners = ref(mockBanners)
