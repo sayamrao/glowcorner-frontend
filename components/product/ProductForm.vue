@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/auth'
+import { apiClient } from '~/services/api'
 import { createProduct, updateProduct, uploadProductImage } from '~/services/commerce'
 import { useToast } from '~/composables/useToast'
 import ProductBasicInfo from "./ProductBasicInfo.vue"
@@ -35,6 +36,14 @@ const totalImageCount = computed(
 
 const MAX_IMAGES = 8
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10 MB
+
+function mediaUrl(url: string | null | undefined): string {
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+
+  const baseUrl = apiClient.getBaseUrl()
+  return baseUrl + (url.startsWith('/') ? '' : '/') + url
+}
 
 interface ProductFormModel {
   name: string
