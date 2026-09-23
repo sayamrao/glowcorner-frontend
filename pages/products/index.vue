@@ -2,7 +2,7 @@
 import { mockProducts } from '~/services/mockData'
 import { SORT_OPTIONS } from '~/constants'
 import { listCategories, listProducts } from '~/services/commerce'
-import type { Category, Product } from '~/types'
+import type { Category, Product, ProductListParams } from '~/types'
 
 const route = useRoute()
 const router = useRouter()
