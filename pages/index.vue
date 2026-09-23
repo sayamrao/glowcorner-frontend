@@ -11,7 +11,9 @@ const flashSaleProducts = ref<Product[]>([])
 
 const { data: homeProductsData } = await useAsyncData('homeProducts', async () => {
   try {
-    return await listProducts({ limit: 8, sortBy: 'newest' })
+    const homeProducts = await listProducts({ limit: 8, sortBy: 'newest' })
+    console.log("home prodycts: ", homeProducts)
+    return homeProducts
   } catch {
     return {
       data: mockProducts.slice(0, 8),
@@ -131,7 +133,7 @@ onMounted(() => {
           class="group block bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden hover:shadow-card-hover transition-all"
         >
           <div class="relative aspect-square overflow-hidden bg-surface-100 dark:bg-surface-800">
-             <img :src="product.images[0].url" :alt="product.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+             <img v-if="product.images.length > 0" :src="product.images[0].url" :alt="product.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
              <div v-if="product.compareAtPrice" class="absolute top-2 right-2 bg-danger-500 text-white text-xs font-bold px-2 py-1 rounded">
                -{{ Math.round(((product.compareAtPrice! - product.price) / product.compareAtPrice!) * 100) }}%
              </div>
@@ -166,7 +168,7 @@ onMounted(() => {
           class="group block bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden hover:shadow-card-hover transition-all"
         >
           <div class="relative aspect-square overflow-hidden bg-surface-100 dark:bg-surface-800">
-             <img :src="product.images[0].url" :alt="product.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+             <img v-if="product.images.length > 0" :src="product.images[0].url" :alt="product.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
           </div>
           <div class="p-4 space-y-1">
             <span class="text-xs text-surface-500">{{ product.categoryName }}</span>
