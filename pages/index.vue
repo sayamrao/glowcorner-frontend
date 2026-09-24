@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { mockBanners, mockProducts } from '~/services/mockData'
+import { mockBanners } from '~/services/mockData'
 import { listCategories, listProducts } from '~/services/commerce'
 import type { Category, Product } from '~/types'
 import { formatPrice } from '~/utils'
@@ -33,15 +33,15 @@ categories.value = (categoriesData.value || []).slice(0, 8)
 const { data: homeProductsData } = await useAsyncData('homeProducts', async () => {
   try {
     const homeProducts = await listProducts({ limit: 8, sortBy: 'newest' })
-    console.log("home prodycts: ", homeProducts)
     return homeProducts
-  } catch {
+  } catch (error) {
+    console.error('Failed to load homepage products:', error)
     return {
-      data: mockProducts.slice(0, 8),
-      total: mockProducts.length,
+      data: [],
+      total: 0,
       page: 1,
       limit: 8,
-      totalPages: 1,
+      totalPages: 0,
     }
   }
 })
