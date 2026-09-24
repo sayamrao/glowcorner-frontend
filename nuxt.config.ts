@@ -72,13 +72,9 @@ export default defineNuxtConfig({
 
   nitro: {
     compressPublicAssets: true,
-    prerender: {
-      routes: ['/'],
-    },
   },
 
   routeRules: {
-    '/': { prerender: true },
     '/products/**': { swr: 3600 },
     '/dashboard/**': { ssr: false },
     '/seller/**': { ssr: false },
