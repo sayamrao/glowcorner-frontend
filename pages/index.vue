@@ -7,6 +7,7 @@ import { formatPrice } from '~/utils'
 const banners = ref(mockBanners)
 const categories = ref<Category[]>([])
 const trendingProducts = ref<Product[]>([])
+const newArrivals = ref<Product[]>([])
 const flashSaleProducts = ref<Product[]>([])
 
 const categoryIcons: Record<string, string> = {
@@ -32,7 +33,7 @@ categories.value = (categoriesData.value || []).slice(0, 8)
 
 const { data: homeProductsData } = await useAsyncData('homeProducts', async () => {
   try {
-    const homeProducts = await listProducts({ limit: 8, sortBy: 'newest' })
+    const homeProducts = await listProducts({ limit: 24, sortBy: 'newest' })
     return homeProducts
   } catch (error) {
     console.error('Failed to load homepage products:', error)
@@ -40,15 +41,16 @@ const { data: homeProductsData } = await useAsyncData('homeProducts', async () =
       data: [],
       total: 0,
       page: 1,
-      limit: 8,
+      limit: 24,
       totalPages: 0,
     }
   }
 })
 
 const homeProducts = homeProductsData.value?.data || []
-trendingProducts.value = homeProducts.slice(0, 4)
-flashSaleProducts.value = homeProducts.filter(product => product.compareAtPrice && product.compareAtPrice > product.price).slice(0, 4)
+trendingProducts.value = homeProducts.slice(0, 8)
+newArrivals.value = homeProducts.slice(8, 20)
+flashSaleProducts.value = homeProducts.filter(product => product.compareAtPrice && product.compareAtPrice > product.price).slice(0, 8)
 
 // Computed for flash sale countdown mock
 const timeLeft = ref({ hours: 12, minutes: 45, seconds: 30 })
@@ -199,6 +201,32 @@ onMounted(() => {
               <span>{{ product.rating }}</span>
               <span class="text-surface-400">({{ product.reviewCount }})</span>
             </div>
+            <div class="text-lg font-bold text-brand-600 dark:text-brand-400">{{ formatPrice(product.price) }}</div>
+          </div>
+        </NuxtLink>
+      </div>
+    </section>
+
+    <!-- New Arrivals -->
+    <section v-if="newArrivals.length" class="container-app">
+      <div class="flex items-end justify-between mb-6">
+        <h2 class="text-2xl font-bold">More to Explore</h2>
+        <NuxtLink to="/products?sort=newest" class="text-brand-600 hover:text-brand-700 font-medium text-sm">View All</NuxtLink>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <NuxtLink
+          v-for="product in newArrivals"
+          :key="product.id"
+          :to="`/products/${product.slug}`"
+          class="group block bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden hover:shadow-card-hover transition-all"
+        >
+          <div class="relative aspect-square overflow-hidden bg-surface-100 dark:bg-surface-800">
+            <img v-if="product.images.length > 0" :src="product.images[0].url" :alt="product.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+          </div>
+          <div class="p-4 space-y-1">
+            <span class="text-xs text-surface-500">{{ product.categoryName }}</span>
+            <h3 class="font-medium text-surface-900 dark:text-white line-clamp-2 text-sm">{{ product.name }}</h3>
             <div class="text-lg font-bold text-brand-600 dark:text-brand-400">{{ formatPrice(product.price) }}</div>
           </div>
         </NuxtLink>
