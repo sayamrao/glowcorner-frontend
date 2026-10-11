@@ -114,7 +114,14 @@ onMounted(() => {
   if (catalogSentinel.value && typeof IntersectionObserver !== 'undefined') {
     observer = new IntersectionObserver((entries) => {
       if (entries.some(entry => entry.isIntersecting)) {
-        void loadMoreProducts()
+        void loadMoreProducts().finally(() => {
+          // Re-observe after the grid grows so scrolling can continue seamlessly
+          // when the sentinel remains inside the prefetch margin.
+          if (!catalogError.value && hasMoreProducts.value && catalogSentinel.value) {
+            observer?.unobserve(catalogSentinel.value)
+            observer?.observe(catalogSentinel.value)
+          }
+        })
       }
     }, { rootMargin: '400px 0px' })
     observer.observe(catalogSentinel.value)
