@@ -1,18 +1,49 @@
 <script setup lang="ts">
 import { useCartStore } from '~/stores/cart'
 import { useAuthStore } from '~/stores/auth'
+import { listCategories } from '~/services/commerce'
+import type { Category } from '~/types'
 
 const cartStore = useCartStore()
 const authStore = useAuthStore()
 
 const isMenuOpen = ref(false)
 
-const navigation = [
-  { name: 'Home', href: '/' },
-  { name: 'RC Cars', href: '/products?category=remote-controlled' },
-  { name: 'Educational', href: '/products?category=educational-toys' },
-  { name: 'Water Toys', href: '/products?category=water-toys' },
-]
+const categories = ref<Category[]>([])
+
+const flatCategories = computed(() => {
+  const flattened: Array<Category & { depth: number }> = []
+
+  function visit(items: Category[], depth = 0) {
+    for (const category of items) {
+      flattened.push({ ...category, depth })
+      if (category.children?.length) {
+        visit(category.children, depth + 1)
+      }
+    }
+  }
+
+  visit(categories.value)
+  return flattened
+})
+
+const navigation = computed(() => [
+  { name: 'Home', href: '/', depth: 0, isCategory: false },
+  ...flatCategories.value.map(category => ({
+    name: category.name,
+    href: `/products?category=${encodeURIComponent(category.slug)}`,
+    depth: category.depth,
+    isCategory: true,
+  })),
+])
+
+onMounted(async () => {
+  try {
+    categories.value = await listCategories()
+  } catch (error) {
+    console.error('Failed to load navigation categories:', error)
+  }
+})
 
 function toggleMenu() {
   isMenuOpen.value = !isMenuOpen.value
@@ -43,7 +74,7 @@ function toggleMenu() {
         <!-- Desktop Navigation -->
         <nav class="hidden lg:flex items-center gap-8">
           <NuxtLink
-            v-for="item in navigation"
+            v-for="item in navigation.filter(item => !item.isCategory || item.depth === 0)"
             :key="item.name"
             :to="item.href"
             class="text-sm font-medium text-surface-600 hover:text-brand-600 dark:text-surface-300 dark:hover:text-brand-400 transition-colors"
@@ -94,6 +125,7 @@ function toggleMenu() {
             :key="item.name"
             :to="item.href"
             class="text-base font-medium text-surface-600 dark:text-surface-300 hover:text-brand-600 transition-colors"
+            :style="{ paddingLeft: `${item.depth * 1}rem` }"
             @click="isMenuOpen = false"
           >
             {{ item.name }}
