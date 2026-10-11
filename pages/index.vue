@@ -52,6 +52,45 @@ trendingProducts.value = homeProducts.slice(0, 8)
 newArrivals.value = homeProducts.slice(8, 20)
 flashSaleProducts.value = homeProducts.filter(product => product.compareAtPrice && product.compareAtPrice > product.price).slice(0, 8)
 
+// The first 20 products are already shown in Trending Now and More to Explore.
+// Start the full catalog after those products to avoid repeating them.
+const catalogPageSize = 24
+const catalogProducts = ref<Product[]>(homeProducts.slice(20))
+const catalogPage = ref(homeProductsData.value?.page || 1)
+const catalogTotalPages = ref(homeProductsData.value?.totalPages || 0)
+const isLoadingMore = ref(false)
+const catalogError = ref('')
+const catalogSentinel = ref<HTMLElement | null>(null)
+const hasMoreProducts = computed(() => catalogPage.value < catalogTotalPages.value)
+const seenProductIds = new Set(homeProducts.map(product => product.id))
+
+async function loadMoreProducts() {
+  if (isLoadingMore.value || !hasMoreProducts.value) return
+
+  isLoadingMore.value = true
+  catalogError.value = ''
+
+  try {
+    const nextPage = catalogPage.value + 1
+    const response = await listProducts({
+      page: nextPage,
+      limit: catalogPageSize,
+      sortBy: 'newest',
+    })
+
+    const unseenProducts = response.data.filter(product => !seenProductIds.has(product.id))
+    unseenProducts.forEach(product => seenProductIds.add(product.id))
+    catalogProducts.value.push(...unseenProducts)
+    catalogPage.value = response.page
+    catalogTotalPages.value = response.totalPages
+  } catch (error) {
+    console.error('Failed to load more homepage products:', error)
+    catalogError.value = 'Could not load more products. Please try again.'
+  } finally {
+    isLoadingMore.value = false
+  }
+}
+
 // Computed for flash sale countdown mock
 const timeLeft = ref({ hours: 12, minutes: 45, seconds: 30 })
 
@@ -71,7 +110,20 @@ onMounted(() => {
     }
   }, 1000)
 
-  onUnmounted(() => clearInterval(timer))
+  let observer: IntersectionObserver | undefined
+  if (catalogSentinel.value && typeof IntersectionObserver !== 'undefined') {
+    observer = new IntersectionObserver((entries) => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        void loadMoreProducts()
+      }
+    }, { rootMargin: '400px 0px' })
+    observer.observe(catalogSentinel.value)
+  }
+
+  onUnmounted(() => {
+    clearInterval(timer)
+    observer?.disconnect()
+  })
 })
 </script>
 
@@ -230,6 +282,58 @@ onMounted(() => {
             <div class="text-lg font-bold text-brand-600 dark:text-brand-400">{{ formatPrice(product.price) }}</div>
           </div>
         </NuxtLink>
+      </div>
+    </section>
+
+    <!-- Full Catalog with Infinite Scroll -->
+    <section v-if="(homeProductsData?.total || 0) > 0" class="container-app">
+      <div class="flex items-end justify-between mb-6 pb-4 border-b border-surface-200 dark:border-surface-800">
+        <div>
+          <h2 class="text-2xl font-bold">All Products</h2>
+          <p class="text-sm text-surface-500 mt-1">Keep scrolling to explore our full collection.</p>
+        </div>
+        <NuxtLink to="/products" class="text-brand-600 hover:text-brand-700 font-medium text-sm">View All</NuxtLink>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <NuxtLink
+          v-for="product in catalogProducts"
+          :key="product.id"
+          :to="`/products/${product.slug}`"
+          class="group block bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden hover:shadow-card-hover transition-all"
+        >
+          <div class="relative aspect-square overflow-hidden bg-surface-100 dark:bg-surface-800">
+            <img
+              v-if="product.images.length > 0"
+              :src="product.images[0].url"
+              :alt="product.name"
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              loading="lazy"
+            />
+          </div>
+          <div class="p-4 space-y-1">
+            <span class="text-xs text-surface-500">{{ product.categoryName }}</span>
+            <h3 class="font-medium text-surface-900 dark:text-white line-clamp-2 text-sm">{{ product.name }}</h3>
+            <div class="text-lg font-bold text-brand-600 dark:text-brand-400">{{ formatPrice(product.price) }}</div>
+          </div>
+        </NuxtLink>
+      </div>
+
+      <div ref="catalogSentinel" class="flex flex-col items-center justify-center gap-3 py-8" aria-live="polite">
+        <p v-if="isLoadingMore" class="text-sm text-surface-500">Loading more products…</p>
+        <template v-else-if="catalogError">
+          <p class="text-sm text-danger-500">{{ catalogError }}</p>
+          <button
+            type="button"
+            class="rounded-lg border border-surface-300 dark:border-surface-700 px-4 py-2 text-sm font-medium hover:bg-surface-50 dark:hover:bg-surface-800"
+            @click="loadMoreProducts"
+          >
+            Try again
+          </button>
+        </template>
+        <p v-else-if="!hasMoreProducts && catalogProducts.length > 0" class="text-sm text-surface-500">
+          You've reached the end of our products.
+        </p>
       </div>
     </section>
 
