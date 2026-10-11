@@ -78,6 +78,22 @@ function findCategoryBySlugOrId(
   return undefined
 }
 
+const flatCategories = computed(() => {
+  const flattened: Array<Category & { depth: number }> = []
+
+  function visit(items: Category[], depth = 0) {
+    for (const category of items) {
+      flattened.push({ ...category, depth })
+      if (category.children?.length) {
+        visit(category.children, depth + 1)
+      }
+    }
+  }
+
+  visit(categories.value)
+  return flattened
+})
+
 function getSelectedCategoryId(): string | undefined {
   if (!selectedCategory.value) {
     return undefined
@@ -163,13 +179,13 @@ useHead({
                 All Categories
               </button>
             </li>
-            <li v-for="cat in categories" :key="cat.id">
+            <li v-for="cat in flatCategories" :key="cat.id">
               <button 
                 class="text-sm transition-colors hover:text-brand-600 w-full text-left flex justify-between items-center" 
                 :class="selectedCategory === cat.slug || selectedCategory === cat.id ? 'text-brand-600 font-bold' : 'text-surface-600 dark:text-surface-400'"
                 @click="selectedCategory = cat.slug"
               >
-                <span>{{ cat.name }}</span>
+                <span :style="{ paddingLeft: `${cat.depth * 1}rem` }">{{ cat.name }}</span>
                 
               </button>
             </li>
@@ -243,9 +259,9 @@ useHead({
               <input type="radio" v-model="selectedCategory" value="" class="text-brand-600 focus:ring-brand-500" />
               <span>All Categories</span>
             </label>
-            <label v-for="cat in categories" :key="cat.id" class="flex items-center gap-3">
+            <label v-for="cat in flatCategories" :key="cat.id" class="flex items-center gap-3">
               <input type="radio" v-model="selectedCategory" :value="cat.slug" class="text-brand-600 focus:ring-brand-500" />
-              <span>{{ cat.name }}</span>
+              <span :style="{ paddingLeft: `${cat.depth * 1}rem` }">{{ cat.name }}</span>
             </label>
           </div>
         </div>
