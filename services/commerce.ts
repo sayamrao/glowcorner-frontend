@@ -277,7 +277,10 @@ export async function getProduct(identifier: string): Promise < Product > {
   return mapBackendProduct(response)
 }
 export async function getProductRaw(identifier: string): Promise < BackendProduct > {
-  const endpoint = identifier.includes('-') && !/^[0-9a-f-]{36}$/i.test(identifier) ? `/products/slug/${identifier}` : `/products/${identifier}`
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier)
+  const endpoint = isUuid
+    ? `/products/${identifier}`
+    : `/products/slug/${encodeURIComponent(identifier)}`
   const response = await apiClient.get < ApiResponse < BackendProduct >> (endpoint)
   return response.data
 }
