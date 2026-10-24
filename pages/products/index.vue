@@ -10,11 +10,18 @@ const router = useRouter()
 const viewMode = ref<'grid' | 'list'>('grid')
 const showMobileFilters = ref(false)
 const isLoading = ref(false)
+const isLoadingMore = ref(false)
 const apiError = ref('')
+const currentPage = ref(1)
+const pageSize = 20
+const hasMoreProducts = ref(false)
+const loadMoreTrigger = ref<HTMLElement | null>(null)
 
 const categories = ref<Category[]>([])
 const products = ref<Product[]>([])
 const totalProducts = ref(0)
+let loadMoreObserver: IntersectionObserver | null = null
+let requestVersion = 0
 
 const selectedCategory = computed({
   get: () => String(route.query.category || ''),
@@ -103,13 +110,18 @@ function getSelectedCategoryId(): string | undefined {
 }
 
 async function fetchProducts() {
+  const version = ++requestVersion
+  currentPage.value = 1
   isLoading.value = true
+  isLoadingMore.value = false
   apiError.value = ''
+  products.value = []
+  hasMoreProducts.value = false
 
   try {
     const response = await listProducts({
       page: 1,
-      limit: 48,
+      limit: pageSize,
       search: searchQuery.value || undefined,
       category: getSelectedCategoryId(),
       minPrice: minPrice.value ? Number(minPrice.value) : undefined,
@@ -117,18 +129,82 @@ async function fetchProducts() {
       sortBy: sortBy.value as ProductListParams['sortBy'],
     })
 
+    if (version !== requestVersion) return
     products.value = response.data
     totalProducts.value = response.total
+    currentPage.value = response.page
+    hasMoreProducts.value = response.page < response.totalPages
   } catch (error: any) {
+    if (version !== requestVersion) return
     console.error('Failed to load products:', error)
     apiError.value = error?.message || 'Could not load products from API'
     products.value = [...mockProducts]
     totalProducts.value = products.value.length
+    hasMoreProducts.value = false
   } finally {
-    isLoading.value = false
+    if (version === requestVersion) isLoading.value = false
   }
 }
 
+async function loadMoreProducts() {
+  if (isLoading.value || isLoadingMore.value || !hasMoreProducts.value) return
+
+  const version = requestVersion
+  isLoadingMore.value = true
+  try {
+    const nextPage = currentPage.value + 1
+    const response = await listProducts({
+      page: nextPage,
+      limit: pageSize,
+      search: searchQuery.value || undefined,
+      category: getSelectedCategoryId(),
+      minPrice: minPrice.value ? Number(minPrice.value) : undefined,
+      maxPrice: maxPrice.value ? Number(maxPrice.value) : undefined,
+      sortBy: sortBy.value as ProductListParams['sortBy'],
+    })
+
+    if (version !== requestVersion) return
+    const existingIds = new Set(products.value.map(product => product.id))
+    products.value = [
+      ...products.value,
+      ...response.data.filter(product => !existingIds.has(product.id)),
+    ]
+    currentPage.value = response.page
+    totalProducts.value = response.total
+    hasMoreProducts.value = response.page < response.totalPages
+  } catch (error: any) {
+    if (version === requestVersion) {
+      console.error('Failed to load more products:', error)
+      apiError.value = error?.message || 'Could not load more products'
+    }
+  } finally {
+    if (version === requestVersion) isLoadingMore.value = false
+  }
+}
+
+function setupLoadMoreObserver() {
+  loadMoreObserver?.disconnect()
+  loadMoreObserver = null
+
+  if (typeof IntersectionObserver === 'undefined' || !loadMoreTrigger.value) return
+
+  loadMoreObserver = new IntersectionObserver((entries) => {
+    if (entries.some(entry => entry.isIntersecting)) {
+      void loadMoreProducts()
+    }
+  }, { rootMargin: '500px 0px' })
+
+  loadMoreObserver.observe(loadMoreTrigger.value)
+}
+
+onMounted(() => {
+  setupLoadMoreObserver()
+})
+
+onBeforeUnmount(() => {
+  loadMoreObserver?.disconnect()
+  loadMoreObserver = null
+})
 const filteredProducts = computed(() => products.value)
 
 watch(
@@ -139,8 +215,10 @@ watch(
     route.query.minPrice,
     route.query.maxPrice,
   ],
-  () => {
-    fetchProducts()
+  async () => {
+    await fetchProducts()
+    await nextTick()
+    setupLoadMoreObserver()
   }
 )
 
@@ -233,6 +311,25 @@ useHead({
           <ProductCard v-for="product in filteredProducts" :key="product.id" :product="product" />
         </div>
         
+        <div
+          v-if="filteredProducts.length > 0"
+          ref="loadMoreTrigger"
+          class="h-2 w-full"
+          aria-hidden="true"
+        ></div>
+
+        <div v-if="isLoadingMore" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mt-4">
+          <UiSkeleton v-for="item in 4" :key="`more-${item}`" class="aspect-[3/4] rounded-2xl" />
+        </div>
+
+        <p v-else-if="filteredProducts.length > 0 && !hasMoreProducts" class="text-center text-sm text-surface-500 py-8">
+          You've reached the end of the products.
+        </p>
+
+        <div v-if="apiError && products.length > 0" class="mt-4 text-center">
+          <UiButton variant="outline" @click="loadMoreProducts">Retry loading more products</UiButton>
+        </div>
+
         <!-- Empty State -->
         <div v-else class="text-center py-24 bg-surface-50 dark:bg-surface-900 rounded-3xl">
           <div class="text-4xl mb-4">🔍</div>
