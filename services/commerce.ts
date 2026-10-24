@@ -259,7 +259,7 @@ export async function listProducts(params: ProductListParams = {}): Promise < Pa
   const sort = mapSort(params.sortBy)
   const response = await apiClient.get < BackendPaginated < BackendProduct >> ('/products', {
       page: params.page,
-      page_size: params.limit,
+      limit: params.limit,
       q: params.search,
       category_id: params.category,
       ...sort,
