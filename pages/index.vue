@@ -12,13 +12,67 @@ const flashSaleProducts = ref<Product[]>([])
 
 const categoryIcons: Record<string, string> = {
   'remote-controlled': '🏎️',
-  'water-toys': '🔫',
+  'rc-cars': '🏎️',
+  'water-toys': '🛟',
   'educational-toys': '🧩',
+  'learning-toys': '🧠',
   'musical-toys': '🎹',
   'bubble-guns': '🫧',
   'die-cast-model-cars': '🚗',
-  'makeup': '💅',
-  'money-box': '🏦',
+  'toy-cars': '🚙',
+  'vehicles': '🚗',
+  'makeup': '💄',
+  'cosmetics': '💄',
+  'beauty': '💅',
+  'money-box': '🐷',
+  'clothing': '👕',
+  'kids-clothing': '🧒',
+  'garments': '👗',
+  'jewellery': '💍',
+  'jewelry': '💍',
+  'lunch-boxes': '🍱',
+  'lunch-box': '🍱',
+  'bottles': '🍼',
+  'water-bottles': '🥤',
+  'baby-products': '🍼',
+  'baby-care': '🧸',
+  'toys': '🧸',
+  'dolls': '🪆',
+  'building-blocks': '🧱',
+  'outdoor-toys': '🛝',
+  'sports-toys': '⚽',
+  'books': '📚',
+  'school-supplies': '🎒',
+  'home-and-living': '🏠',
+  'accessories': '👜',
+}
+
+function getCategoryIcon(category: Category): string {
+  const slug = category.slug.toLowerCase().trim()
+  const name = category.name.toLowerCase().trim()
+  const exactMatch = categoryIcons[slug]
+  if (exactMatch) return exactMatch
+
+  const value = `${slug} ${name}`
+  if (/makeup|cosmetic|beauty|lipstick|skincare|nail/.test(value)) return '💄'
+  if (/jewel|necklace|ring|bracelet|earring/.test(value)) return '💍'
+  if (/cloth|garment|dress|shirt|fashion|apparel|wear/.test(value)) return '👕'
+  if (/lunch.?box|food.?container/.test(value)) return '🍱'
+  if (/bottle|sipper|flask|tumbler/.test(value)) return '🥤'
+  if (/baby|infant|newborn|walker|stroller|feeding/.test(value)) return '🍼'
+  if (/car|vehicle|truck|racing|remote.?control|rc.?/.test(value)) return '🚗'
+  if (/water|pool|swim|beach/.test(value)) return '🛟'
+  if (/music|piano|instrument|sound/.test(value)) return '🎹'
+  if (/education|learn|puzzle|brain|block|montessori|school/.test(value)) return '🧩'
+  if (/bubble/.test(value)) return '🫧'
+  if (/money|bank|saving|coin|wallet/.test(value)) return '🐷'
+  if (/doll|plush|teddy|stuffed/.test(value)) return '🧸'
+  if (/sport|ball|football|outdoor|fitness/.test(value)) return '⚽'
+  if (/book|read|stationery|school/.test(value)) return '📚'
+  if (/home|kitchen|household|living/.test(value)) return '🏠'
+  if (/toy|play|game/.test(value)) return '🧸'
+
+  return '🛍️'
 }
 
 const { data: categoriesData } = await useAsyncData('homeCategories', async () => {
@@ -180,7 +234,7 @@ onMounted(() => {
           class="flex flex-col items-center gap-3 p-4 rounded-2xl hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors group"
         >
           <div class="w-16 h-16 rounded-full bg-surface-100 dark:bg-surface-800 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:bg-brand-50 dark:group-hover:bg-brand-900/30 transition-all">
-            {{ categoryIcons[category.slug] || '🛍️' }}
+            {{ getCategoryIcon(category) }}
           </div>
           <span class="text-sm font-medium text-center text-surface-700 dark:text-surface-300 group-hover:text-brand-600 dark:group-hover:text-brand-400">
             {{ category.name }}
