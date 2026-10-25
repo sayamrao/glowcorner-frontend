@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/auth'
 import { apiClient } from '~/services/api'
-import { createProduct, updateProduct, uploadProductImage } from '~/services/commerce'
+import { createProduct, updateProduct, uploadProductImage, deleteProductImage } from '~/services/commerce'
 import { useToast } from '~/composables/useToast'
 import ProductBasicInfo from "./ProductBasicInfo.vue"
 import ProductPricing from "./ProductPricing.vue"
@@ -20,14 +20,15 @@ interface VariantForm {
 
 const imageFiles = ref<File[]>([])
 const imagePreviews = ref<string[]>([])
+const removedMediaIds = ref<string[]>([])
 const isUploadingImages = ref(false)
 
 const existingMedia = computed(() => {
   if (props.mode !== "edit" || !props.product?.media) return []
 
-  return [...props.product.media].sort(
-    (a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
-  )
+  return [...props.product.media]
+    .filter((image: any) => !removedMediaIds.value.includes(image.id))
+    .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
 })
 
 const totalImageCount = computed(
@@ -246,6 +247,13 @@ function removeSelectedImage(index: number) {
   imagePreviews.value.splice(index, 1)
 }
 
+function removeExistingImage(image: any) {
+  if (isSubmitting.value || isUploadingImages.value) return
+  if (!removedMediaIds.value.includes(image.id)) {
+    removedMediaIds.value.push(image.id)
+  }
+}
+
 function addVariant() {
   form.variants.push({
     sku: "",
@@ -393,9 +401,14 @@ async function submit() {
         "Product was saved, but no product ID was returned."
       )
     }
-     // -----------------------------------------
-    // Upload images
-    // -----------------------------------------
+    // Remove existing images marked for deletion, then upload newly selected images.
+    if (props.mode === "edit" && removedMediaIds.value.length > 0) {
+      isUploadingImages.value = true
+      for (const mediaId of removedMediaIds.value) {
+        await deleteProductImage(productId, mediaId)
+      }
+      removedMediaIds.value = []
+    }
 
     if (imageFiles.value.length > 0) {
       isUploadingImages.value = true
@@ -458,8 +471,8 @@ async function submit() {
         </h3>
 
         <p class="text-sm text-gray-500 mt-1">
-          Upload up to {{ MAX_IMAGES }} images. JPG, PNG or WebP.
-          Maximum 10 MB each.
+          Keep, remove, or add images. Up to {{ MAX_IMAGES }} images total.
+          JPG, PNG or WebP. Maximum 10 MB each.
         </p>
       </div>
 
@@ -514,6 +527,16 @@ async function submit() {
             >
               Primary image
             </div>
+            <button
+              type="button"
+              class="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/75 text-white flex items-center justify-center"
+              :disabled="isSubmitting || isUploadingImages"
+              aria-label="Remove this product image"
+              title="Remove image"
+              @click="removeExistingImage(image)"
+            >
+              ×
+            </button>
           </div>
         </div>
       </div>
