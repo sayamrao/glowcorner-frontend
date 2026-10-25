@@ -516,8 +516,23 @@ export async function deleteProduct(id: string) {
   return response.data
 }
 export async function listSellerProducts(): Promise < Product[] > {
-  const response = await apiClient.get < BackendPaginated < BackendProduct >> ('/products', undefined, true)
-  return response.data.map(mapBackendProduct)
+  const pageSize = 100
+  let page = 1
+  let totalPages = 1
+  const products: Product[] = []
+
+  do {
+    const response = await apiClient.get < BackendPaginated < BackendProduct >> (
+      '/sellers/me/products',
+      { page, page_size: pageSize },
+      true
+    )
+    products.push(...response.data.map(mapBackendProduct))
+    totalPages = response.meta.total_pages || 1
+    page += 1
+  } while (page <= totalPages)
+
+  return products
 }
 export async function listSellerOrders(): Promise < Order[] > {
   const response = await apiClient.get < BackendPaginated < BackendOrder >> ('/sellers/me/orders', undefined, true)
