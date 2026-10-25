@@ -4,37 +4,26 @@ import { formatPrice } from '~/utils'
 import { listSellerProducts, deleteProduct } from '~/services/commerce'
 import type { Product } from '~/types'
 import ProductActions from '~/components/product/ProductActions.vue'
-import { storeToRefs } from "pinia";
-import { useAppStore } from "@/stores/app";
 
 const authStore = useAuthStore()
 const products = ref<Product[]>([])
 const apiError = ref('')
 const isLoading = ref(true)
-const appStore = useAppStore(); 
 
-const { categories, brands } = storeToRefs(appStore);
-
-onMounted(async () => {
-  console.log("mounted")
+const loadProducts = async () => {
+  isLoading.value = true
+  apiError.value = ''
   try {
     products.value = await listSellerProducts()
-    console.log(products.value)
   } catch (error: any) {
-    apiError.value = error?.message || 'Could not load products from API'
-    // Fallback to mock data structure for visual testing
-    products.value = [
-      { id: '1', name: '360° Remote Control Stunt Car', price: 3490, stock: 12, isActive: true, sales: 45 } as unknown as Product,
-      { id: '2', name: 'Splash & Learn Water Play Table', price: 5890, stock: 50, isActive: true, sales: 120 } as unknown as Product,
-      { id: '3', name: 'Interactive Baby Piano Keyboard', price: 2290, stock: 0, isActive: false, sales: 300 } as unknown as Product,
-    ]
-    if (!categories.value.length) {
-        appStore.fetchCategories();
-    }
+    apiError.value = error?.data?.detail || error?.message || 'Could not load your products. Please try again.'
+    products.value = []
   } finally {
     isLoading.value = false
   }
-})
+}
+
+onMounted(loadProducts)
 
 useHead({
   title: 'My Products - Seller Dashboard',
@@ -101,11 +90,17 @@ const confirmDelete = async (product: Product) => {
         </div>
 
         <div v-if="apiError" class="mb-4 rounded-xl border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-700 dark:border-warning-900 dark:bg-warning-900/20 dark:text-warning-300">
-          {{ apiError }}. Showing local fallback.
+          {{ apiError }}
+          <button class="ml-2 font-semibold underline" @click="loadProducts">Try again</button>
         </div>
 
         <div class="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-2xl overflow-hidden shadow-sm">
-          <div class="overflow-x-auto">
+          <div v-if="isLoading" class="p-8 text-center text-surface-500">Loading your products…</div>
+          <div v-else-if="!products.length && !apiError" class="p-8 text-center text-surface-500">
+            You haven't added any products yet.
+            <div class="mt-3"><NuxtLink to="/seller/products/new" class="font-semibold text-brand-600">Add your first product</NuxtLink></div>
+          </div>
+          <div v-else-if="products.length" class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
               <thead>
                 <tr class="bg-surface-50 dark:bg-surface-800/50 border-b border-surface-200 dark:border-surface-800 text-sm font-medium text-surface-500">
@@ -140,12 +135,8 @@ const confirmDelete = async (product: Product) => {
               </tbody>
             </table>
           </div>
-          <div class="p-4 border-t border-surface-200 dark:border-surface-800 flex items-center justify-between text-sm text-surface-500">
-            <span>Showing 1 to {{ products.length }} of {{ products.length }} entries</span>
-            <div class="flex gap-2">
-              <UiButton variant="outline" size="sm" disabled>Previous</UiButton>
-              <UiButton variant="outline" size="sm" disabled>Next</UiButton>
-            </div>
+          <div v-if="!isLoading && products.length" class="p-4 border-t border-surface-200 dark:border-surface-800 flex items-center justify-between text-sm text-surface-500">
+            <span>Showing all {{ products.length }} of your products</span>
           </div>
         </div>
         <!-- <DeleteProductModal
