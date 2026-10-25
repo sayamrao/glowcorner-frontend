@@ -563,6 +563,10 @@ export function productToCartItem(product: Product, quantity = 1, variantId ? : 
   }
 }
 
+export async function deleteProductImage(productId: string, mediaId: string) {
+  return apiClient.delete(`/products/${productId}/media/${mediaId}`, true)
+}
+
 export async function uploadProductImage(
   productId: string,
   file: File
