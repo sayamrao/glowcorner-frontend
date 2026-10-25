@@ -24,5 +24,6 @@ onMounted(async () => {
     :product="product"
     :categories="categories"
     :brands="brands"
+    @saved="navigateTo('/seller/products')"
   />
 </template>
