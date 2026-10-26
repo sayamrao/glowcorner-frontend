@@ -405,9 +405,10 @@ async function submit() {
     if (imageFiles.value.length > 0) {
       isUploadingImages.value = true
 
-      for (const file of imageFiles.value) {
+      for (const [index, file] of imageFiles.value.entries()) {
         try {
-          await uploadProductImage(productId, file)
+          // Make the first newly added image the product-card/main image.
+          await uploadProductImage(productId, file, index === 0)
         } catch (uploadError: any) {
           const detail = uploadError?.message || uploadError?.data?.detail || "Upload request failed"
           throw new Error(`${file.name}: ${detail}`)
