@@ -569,7 +569,8 @@ export async function deleteProductImage(productId: string, mediaId: string) {
 
 export async function uploadProductImage(
   productId: string,
-  file: File
+  file: File,
+  makePrimary = false
 ) {
   console.log("UPLOAD FILE", {
     name: file.name,
@@ -583,8 +584,9 @@ export async function uploadProductImage(
 
   console.log("FORM DATA", [...formData.entries()])
 
+  const primaryQuery = makePrimary ? '?make_primary=true' : ''
   return apiClient.post(
-    `/products/${productId}/media`,
+    `/products/${productId}/media${primaryQuery}`,
     formData, true
   )
 }
