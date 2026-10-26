@@ -42,7 +42,8 @@ function mediaUrl(url: string | null | undefined): string {
   if (!url) return ''
   if (url.startsWith('http://') || url.startsWith('https://')) return url
 
-  const baseUrl = apiClient.getBaseUrl()
+  // Media is mounted at the API host root (/media), not under /api/v1.
+  const baseUrl = apiClient.getBaseUrl().replace(/\/api\/v1\/?$/, '')
   return baseUrl + (url.startsWith('/') ? '' : '/') + url
 }
 
