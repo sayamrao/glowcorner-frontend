@@ -598,7 +598,8 @@ function mediaUrl(url: string | null | undefined): string {
     return url
   }
 
-  const baseUrl = apiClient.getBaseUrl()
+  // FastAPI serves static media at /media on the host root, outside /api/v1.
+  const baseUrl = apiClient.getBaseUrl().replace(/\/api\/v1\/?$/, '')
 
   return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
 }
