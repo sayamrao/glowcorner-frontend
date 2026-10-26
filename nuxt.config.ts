@@ -75,7 +75,6 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
-    '/products/**': { swr: 3600 },
     '/dashboard/**': { ssr: false },
     '/seller/**': { ssr: false },
     '/admin/**': { ssr: false },
