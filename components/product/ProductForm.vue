@@ -377,17 +377,9 @@ async function submit() {
     if (props.mode === "create") {
       savedProduct = await createProduct(payload)
 
-      toast.success(
-        "Product Created",
-        "Your product has been created."
-      )
     } else {
       savedProduct = await updateProduct(props.product.id, payload)
 
-      toast.success(
-        "Product Updated",
-        "Product updated successfully."
-      )
     }
 
     const productId =
@@ -414,22 +406,31 @@ async function submit() {
       isUploadingImages.value = true
 
       for (const file of imageFiles.value) {
-        console.log("uploadign image")
-        await uploadProductImage(
-          productId,
-          file
-        )
+        try {
+          await uploadProductImage(productId, file)
+        } catch (uploadError: any) {
+          const detail = uploadError?.message || uploadError?.data?.detail || "Upload request failed"
+          throw new Error(`${file.name}: ${detail}`)
+        }
       }
 
       isUploadingImages.value = false
     }
 
 
+    toast.success(
+      props.mode === "create" ? "Product Created" : "Product Updated",
+      imageFiles.value.length > 0
+        ? "Product and images saved successfully."
+        : "Product saved successfully."
+    )
     emit("saved")
   } catch (e: any) {
     isUploadingImages.value = false
-    apiError.value =
-      e?.message ?? "Unable to save product."
+    const message = e?.message || e?.data?.detail || "Unknown error"
+    apiError.value = imageFiles.value.length > 0
+      ? `Product details were saved, but an image could not be uploaded: ${message}`
+      : message
   } finally {
     isSubmitting.value = false
   }
