@@ -3,9 +3,13 @@ import { mockProducts } from '~/services/mockData'
 import { SORT_OPTIONS } from '~/constants'
 import { listCategories, listProducts } from '~/services/commerce'
 import type { Category, Product, ProductListParams } from '~/types'
+import { useCartStore } from '~/stores/cart'
+import { useToast } from '~/composables/useToast'
 
 const route = useRoute()
 const router = useRouter()
+const cartStore = useCartStore()
+const toast = useToast()
 
 const viewMode = ref<'grid' | 'list'>('grid')
 const showMobileFilters = ref(false)
@@ -182,6 +186,27 @@ async function loadMoreProducts() {
   }
 }
 
+function handleAddToCart(product: Product) {
+  if (product.stock <= 0) {
+    toast.error('Out of Stock', 'This product is currently unavailable.')
+    return
+  }
+
+  cartStore.addItem({
+    productId: product.id,
+    productName: product.name,
+    productImage: product.images.find(image => image.isMain)?.url || product.images[0]?.url || '',
+    productSlug: product.slug,
+    price: product.price,
+    compareAtPrice: product.compareAtPrice,
+    quantity: 1,
+    maxQuantity: product.stock,
+    sellerName: product.sellerName,
+  })
+
+  toast.success('Added to Cart', product.name + ' has been added to your cart.')
+}
+
 function setupLoadMoreObserver() {
   loadMoreObserver?.disconnect()
   loadMoreObserver = null
@@ -308,7 +333,7 @@ useHead({
         </div>
 
         <div v-else-if="filteredProducts.length > 0" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-          <ProductCard v-for="product in filteredProducts" :key="product.id" :product="product" />
+          <ProductCard v-for="product in filteredProducts" :key="product.id" :product="product" @add-to-cart="handleAddToCart" />
         </div>
         
         <div
