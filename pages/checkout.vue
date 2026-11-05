@@ -157,10 +157,10 @@ async function processOrder() {
 
 // Redirect if cart is empty
 onMounted(() => {
+  cartStore.loadFromStorage()
   if (cartStore.isEmpty) {
     navigateTo('/cart')
   }
-  cartStore.loadFromStorage()
   // if (!authStore.isAuthenticated) {
   //   navigateTo('/auth/login?redirect=/checkout')
   // }
