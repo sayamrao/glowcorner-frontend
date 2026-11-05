@@ -6,6 +6,10 @@ const cartStore = useCartStore()
 const couponCode = ref('')
 const couponError = ref('')
 
+onMounted(() => {
+  cartStore.loadFromStorage()
+})
+
 function updateQuantity(id: string, qty: number) {
   cartStore.updateQuantity(id, qty)
 }
