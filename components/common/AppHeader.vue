@@ -38,6 +38,7 @@ const navigation = computed(() => [
 ])
 
 onMounted(async () => {
+  cartStore.loadFromStorage()
   try {
     categories.value = await listCategories()
   } catch (error) {
