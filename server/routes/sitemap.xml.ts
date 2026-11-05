@@ -15,7 +15,7 @@ type SitemapCategory = {
   children?: SitemapCategory[]
 }
 
-type ProductPage = {
+type CategoryResponse = {\n  data?: SitemapCategory[]\n}\n\ntype ProductPage = {
   data?: SitemapProduct[]
   meta?: {
     total_pages?: number
